@@ -1,6 +1,9 @@
 use macroquad::prelude::*;
 use ::rand::*;
 
+const WIDTH : i32 = 500;
+const HEIGHT : i32 = 500;
+
 struct TriangleIsocele {
     s:Vec2, //Sommet principal
     m:Vec2, //milieu de la base
@@ -55,6 +58,11 @@ impl Bird{
         }
     }
 
+    pub fn new_random() -> Bird{
+        let position = vec2(random::<f32>()*(WIDTH as f32) ,random::<f32>()*(HEIGHT as f32));
+        Bird::new(position)
+    }
+
     pub fn afficher(&self){
         let points = self.forme.get_points();
         draw_triangle(points.0, points.1, points.2, RED);
@@ -62,14 +70,30 @@ impl Bird{
 }
 
 
-#[macroquad::main("MyGame")]
+fn fenetre_config() -> Conf {
+    Conf {
+        window_title: "Vol en essain".to_owned(),
+        window_width: WIDTH,
+        window_height: HEIGHT,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(fenetre_config)]
 async fn main() {
+
+    let mut oiseaux :Vec<Bird> = Vec::new();
+
+    for _ in 0..random::<u32>()%10 {
+        oiseaux.push(Bird::new_random());
+    }
+
     loop {
         clear_background(BLACK);
 
-        let oiseau = Bird::new(vec2(100.0,100.0));
-
-        oiseau.afficher();
+        for oiseau in &oiseaux {
+            oiseau.afficher();
+        }
 
         next_frame().await
     }
