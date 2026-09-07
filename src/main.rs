@@ -6,28 +6,27 @@ const HEIGHT : f32 = 500.0;
 
 struct TriangleIsocele {
     s:Vec2, //Sommet principal
-    m:Vec2, //milieu de la base
+    hauteur:f32, //hauteur du triangle
+    vec_dir_h:Vec2,  //vecteur directeur hauteur du triangle
     largeur:f32, //logueur de la base
 }
 
 impl TriangleIsocele{
-    pub fn new(s:Vec2, m:Vec2, largeur:f32) -> TriangleIsocele{
+    pub fn new(s:Vec2, hauteur:f32, largeur:f32) -> TriangleIsocele{
         TriangleIsocele{
             s:s,
-            m:m,
+            hauteur:hauteur,
+            vec_dir_h:vec2(0.0, -1.0),
             largeur:largeur
         }
     }
 
-    pub fn get_hauteur(&self) -> Vec2 {
-        vec2(self.s.x - self.m.x, self.s.y - self.m.y)
-    }
+    /*pub fn get_vec_hauteur(&self) -> Vec2 {
+        self.vec_dir_h * self.hauteur
+    }*/
 
     fn get_base_unitaire(&self) -> Vec2 {
-        let vec_dir : Vec2 = self.get_hauteur();
-        let norme : f32 = vec_dir.length();
-        let vec_base = vec2(-vec_dir.y, vec_dir.x)/norme;
-        vec_base
+        vec2(-self.vec_dir_h.y, self.vec_dir_h.x)
     }
 
     pub fn get_points(&self) -> (Vec2,Vec2,Vec2){
@@ -36,8 +35,10 @@ impl TriangleIsocele{
 
         let vec_base_norm = self.get_base_unitaire();
 
-        res.1 = self.m + vec_base_norm*self.largeur/2.0;
-        res.2 = self.m - vec_base_norm*self.largeur/2.0;
+        let m = self.s - self.vec_dir_h*self.hauteur;
+
+        res.1 = m + vec_base_norm*self.largeur/2.0;
+        res.2 = m - vec_base_norm*self.largeur/2.0;
 
         res
     }
@@ -52,7 +53,7 @@ struct Bird {
 impl Bird{
     pub fn new(tete:Vec2) -> Bird{
         Bird{
-            forme:TriangleIsocele::new(tete, vec2(tete.x, tete.y+32.0), 16.0),
+            forme:TriangleIsocele::new(tete, 32.0, 16.0),
             vec_mouv:vec2(1.0,0.0),
             vitesse:1.0
         }
@@ -87,7 +88,7 @@ impl Bird{
             self.vec_mouv *= -1.0;
         }
         self.forme.s += self.vec_mouv;
-        self.forme.m += self.vec_mouv;
+        //self.forme.m += self.vec_mouv;
             
     }
 }
