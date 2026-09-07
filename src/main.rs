@@ -1,14 +1,14 @@
 use macroquad::prelude::*;
 use ::rand::*;
 
-const WIDTH : f32 = 500.0;
+const WIDTH  : f32 = 500.0;
 const HEIGHT : f32 = 500.0;
 
 struct TriangleIsocele {
-    s:Vec2, //Sommet principal
-    hauteur:f32, //hauteur du triangle
-    vec_dir_h:Vec2,  //vecteur directeur hauteur du triangle
-    largeur:f32, //logueur de la base
+    s         :Vec2, //Sommet principal
+    hauteur   :f32, //hauteur du triangle
+    vec_dir_h : Vec2,  //vecteur directeur hauteur du triangle
+    largeur   :f32, //logueur de la base
 }
 
 impl TriangleIsocele{
@@ -20,10 +20,6 @@ impl TriangleIsocele{
             largeur:largeur
         }
     }
-
-    /*pub fn get_vec_hauteur(&self) -> Vec2 {
-        self.vec_dir_h * self.hauteur
-    }*/
 
     fn get_base_unitaire(&self) -> Vec2 {
         vec2(-self.vec_dir_h.y, self.vec_dir_h.x)
@@ -45,17 +41,18 @@ impl TriangleIsocele{
 }
 
 struct Bird {
-    forme:TriangleIsocele,
-    vec_mouv:Vec2,
-    vitesse:f32
+    forme       : TriangleIsocele,
+    vec_vitesse : Vec2,
+    v_max       : f32
 }
 
 impl Bird{
     pub fn new(tete:Vec2) -> Bird{
+        let forme = TriangleIsocele::new(tete, 32.0, 16.0);
         Bird{
-            forme:TriangleIsocele::new(tete, 32.0, 16.0),
-            vec_mouv:vec2(1.0,0.0),
-            vitesse:1.0
+            forme       : forme,
+            vec_vitesse : vec2(0.0,0.0),
+            v_max       : 5.0
         }
     }
 
@@ -78,17 +75,21 @@ impl Bird{
     }
 
     pub fn avancer(&mut self){
+        //On génère une acccélération
         let accel = vec2(random_range(-1.0..1.0),random_range(-1.0..1.0));
 
-        if (self.vec_mouv+accel).length() < 5.0 {
-            self.vec_mouv += accel;
+        //On ajoute l'accélération au vecteur vitesse
+        if (self.vec_vitesse + accel).length() < self.v_max {
+            self.vec_vitesse += accel;
         }
 
         if !self.dans_l_ecran(){
-            self.vec_mouv *= -1.0;
+            self.forme.vec_dir_h *= -1.0;
+            self.vec_vitesse *= -1.0;
         }
-        self.forme.s += self.vec_mouv;
-        //self.forme.m += self.vec_mouv;
+
+        self.forme.s += self.vec_vitesse;
+        self.forme.vec_dir_h = self.vec_vitesse.normalize();
             
     }
 }
