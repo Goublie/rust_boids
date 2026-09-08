@@ -161,7 +161,7 @@ async fn main() {
 
     let mut oiseaux :Vec<Bird> = Vec::new();
 
-    for _ in 0..random::<u32>()%10 {
+    for _ in 5..random_range(6..20) {
         oiseaux.push(Bird::new_random());
     }
 
