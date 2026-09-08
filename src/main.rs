@@ -112,7 +112,7 @@ impl Bird{
                 
                 match eval.0 {
                     //S'il est trop proche
-                    Repulsion => vec_accel += 0.1*(eval.1),
+                    Repulsion => vec_accel += eval.1.normalize_or(eval.1) / 2.0,
                     //S'il est à bonne distance
                     Orientation => vec_accel += 0.1*copain.vec_vitesse,
                     //S'il est éloigné
