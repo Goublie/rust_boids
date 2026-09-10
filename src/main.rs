@@ -152,21 +152,50 @@ impl Bird{
 
     //Renvoie le vecteur accélération pour corriger la position de l'oiseau
     fn observer(&self, oiseaux : &[Bird]) -> Vec2{
-        let mut vec_accel = vec2(0.0, 0.0);
+        let mut vec_repulsion = vec2(0.0, 0.0);
+        let mut vec_orientation = vec2(0.0, 0.0);
+        let mut vec_attraction = vec2(0.0, 0.0);
+        
+        let mut nb_rep = 0.0;
+        let mut nb_ori = 0.0;
+        let mut nb_att = 0.0;
+
         for copain in oiseaux {
-                let eval = self.evaluation_distance(copain);
-                
-                match eval.0 {
-                    //S'il est trop proche
-                    Repulsion => vec_accel += eval.1.normalize_or(eval.1) / self.force_repulsion,
-                    //S'il est à bonne distance
-                    Orientation => vec_accel += self.force_orientation*copain.vec_vitesse,
-                    //S'il est éloigné
-                    Attraction => vec_accel -= self.force_attraction*eval.1,
-                    //S'il est trop loin
-                    Liberte => ()
-                }
+            if std::ptr::eq(self, copain) { continue; }
+            
+            let eval = self.evaluation_distance(copain);
+            
+            match eval.0 {
+                Repulsion => {
+                    if eval.1.length() > 0.0 {
+                        // eval.1 pointe vers self, donc on l'ajoute pour s'éloigner
+                        vec_repulsion += eval.1.normalize();
+                    }
+                    nb_rep += 1.0;
+                },
+                Orientation => {
+                    if copain.vec_vitesse.length() > 0.0 {
+                        vec_orientation += copain.vec_vitesse.normalize();
+                    }
+                    nb_ori += 1.0;
+                },
+                Attraction => {
+                    if eval.1.length() > 0.0 {
+                        // eval.1 pointe vers self, donc on le soustrait pour se rapprocher
+                        vec_attraction -= eval.1.normalize();
+                    }
+                    nb_att += 1.0;
+                },
+                Liberte => ()
+            }
         }
+
+        let mut vec_accel = vec2(0.0, 0.0);
+        // On fait la moyenne des forces pour éviter l'explosion des valeurs quand il y a beaucoup d'oiseaux
+        if nb_rep > 0.0 { vec_accel += (vec_repulsion / nb_rep) * self.force_repulsion; }
+        if nb_ori > 0.0 { vec_accel += (vec_orientation / nb_ori) * self.force_orientation; }
+        if nb_att > 0.0 { vec_accel += (vec_attraction / nb_att) * self.force_attraction; }
+
         vec_accel
     }
 
