@@ -70,7 +70,7 @@ struct Bird {
 impl Bird{
     pub fn new(tete:Vec2) -> Bird{
         Bird{
-            forme               : TriangleIsocele::new(tete, 32.0, 16.0),
+            forme               : TriangleIsocele::new(tete, 8.0, 4.0),
             vec_vitesse         : vec2(0.0,0.0),
             v_max               : 5.0,
             zone_repulsion      : 40.0,
@@ -125,15 +125,15 @@ impl Bird{
         draw_triangle(points.0, points.1, points.2, RED);
     }
 
-    fn dans_l_ecran(&self) -> bool{
-        0.0 < self.forme.s.x && 
-        self.forme.s.x < SIM_WIDTH && 
-        0.0 < self.forme.s.y && 
-        self.forme.s.y < SIM_HEIGHT
-    }
-
     fn evaluation_distance(&self, copain : &Bird) -> (Zone,Vec2) {
-        let vec_distance = self.forme.s - copain.forme.s;
+        let mut vec_distance = self.forme.s - copain.forme.s;
+        
+        // Si les deux oiseaux sont parfaitement superposés, on ajoute un mini décalage
+        // pour éviter qu'ils ne se séparent jamais (distance = 0)
+        if vec_distance.length() == 0.0 {
+            vec_distance = vec2(random_range(-0.1..0.1), random_range(-0.1..0.1));
+        }
+        
         let distance = vec_distance.length();
 
         let mut eval = (Liberte,vec_distance);
@@ -184,14 +184,28 @@ impl Bird{
             self.vec_vitesse = self.vec_vitesse.normalize()*self.v_max;
         }
 
-        if !self.dans_l_ecran(){
-            self.forme.vec_dir_h *= -1.0;
-            self.vec_vitesse *= -1.0;
+        self.forme.s += self.vec_vitesse;
+
+        self.effet_pac_man();
+        
+    }
+
+    fn effet_pac_man(&mut self){
+        if self.forme.s.x < 0.0 {
+            self.forme.s.x += SIM_WIDTH;
+        } else if self.forme.s.x > SIM_WIDTH {
+            self.forme.s.x -= SIM_WIDTH;
         }
 
-        self.forme.s += self.vec_vitesse;
-        self.forme.vec_dir_h = self.vec_vitesse.normalize();
-            
+        if self.forme.s.y < 0.0 {
+            self.forme.s.y += SIM_HEIGHT;
+        } else if self.forme.s.y > SIM_HEIGHT {
+            self.forme.s.y -= SIM_HEIGHT;
+        }
+
+        if self.vec_vitesse.length() > 0.0 {
+            self.forme.vec_dir_h = self.vec_vitesse.normalize();
+        }
     }
 
 }
