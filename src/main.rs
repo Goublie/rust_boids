@@ -1,9 +1,12 @@
 use ::macroquad::prelude::*;
+use macroquad::ui::{hash, root_ui};
 use Zone::*;
 use ::rand::*;
 
-const WIDTH  : f32 = 500.0;
-const HEIGHT : f32 = 500.0;
+const SIM_WIDTH  : f32 = 500.0;
+const SIM_HEIGHT : f32 = 500.0;
+const WINDOW_WIDTH : f32 = 500.0;
+const WINDOW_HEIGHT : f32 = 750.0;
 
 enum Zone {
     Repulsion,
@@ -50,11 +53,18 @@ impl TriangleIsocele{
 
 struct Bird {
     forme               : TriangleIsocele,
+    
     vec_vitesse         : Vec2,
     v_max               : f32,
+    
     zone_repulsion      : f32,
     zone_orientation    : f32,
     zone_attraction     : f32,
+
+    force_repulsion     : f32,
+    force_attraction    : f32,
+    force_orientation   : f32,
+    facteur_chaos       : f32,
 }
 
 impl Bird{
@@ -65,13 +75,49 @@ impl Bird{
             v_max               : 5.0,
             zone_repulsion      : 40.0,
             zone_orientation    : 60.0,
-            zone_attraction     : 80.0
+            zone_attraction     : 80.0,
+            force_attraction    : 0.1,
+            force_repulsion     : 2.0,
+            force_orientation   : 0.1,
+            facteur_chaos       : 0.5,
         }
     }
 
     pub fn new_random() -> Bird{
-        let position = vec2(random::<f32>()*WIDTH ,random::<f32>()*HEIGHT);
+        let position = vec2(random::<f32>()*SIM_WIDTH ,random::<f32>()*SIM_HEIGHT);
         Bird::new(position)
+    }
+    
+    pub fn set_v_max(&mut self, v_max :f32){
+        self.v_max=v_max;
+    }
+
+    pub fn set_zone_repulsion(&mut self, d :f32){
+        self.zone_repulsion=d;
+    }
+
+    pub fn set_zone_orientation(&mut self, d :f32){
+        self.zone_orientation=d;
+    }
+
+    pub fn set_zone_attraction(&mut self, d :f32){
+        self.zone_attraction=d;
+    }
+
+    pub fn set_force_repulsion(&mut self, f : f32){
+        self.force_repulsion = f;
+    }
+
+    pub fn set_force_attraction(&mut self, f : f32){
+        self.force_attraction = f;
+    }
+
+    pub fn set_force_orientation(&mut self, f : f32){
+        self.force_orientation = f;
+    }
+
+    pub fn set_facteur_chaos(&mut self, f : f32){
+        self.facteur_chaos = f;
     }
 
     pub fn afficher(&self){
@@ -81,9 +127,9 @@ impl Bird{
 
     fn dans_l_ecran(&self) -> bool{
         0.0 < self.forme.s.x && 
-        self.forme.s.x < WIDTH && 
+        self.forme.s.x < SIM_WIDTH && 
         0.0 < self.forme.s.y && 
-        self.forme.s.y < HEIGHT
+        self.forme.s.y < SIM_HEIGHT
     }
 
     fn evaluation_distance(&self, copain : &Bird) -> (Zone,Vec2) {
@@ -112,11 +158,11 @@ impl Bird{
                 
                 match eval.0 {
                     //S'il est trop proche
-                    Repulsion => vec_accel += eval.1.normalize_or(eval.1) / 2.0,
+                    Repulsion => vec_accel += eval.1.normalize_or(eval.1) / self.force_repulsion,
                     //S'il est à bonne distance
-                    Orientation => vec_accel += 0.1*copain.vec_vitesse,
+                    Orientation => vec_accel += self.force_orientation*copain.vec_vitesse,
                     //S'il est éloigné
-                    Attraction => vec_accel -= 0.1*eval.1,
+                    Attraction => vec_accel -= self.force_attraction*eval.1,
                     //S'il est trop loin
                     Liberte => ()
                 }
@@ -126,7 +172,10 @@ impl Bird{
 
     fn step(&mut self, accel_correction : Vec2){
         //On génère une acccélération
-        let accel = vec2(random_range(-0.5..0.5),random_range(-0.5..0.5));
+        let mut accel = vec2(0.0, 0.0);
+        if self.facteur_chaos > 0.0 {
+            accel = vec2(random_range(-self.facteur_chaos..self.facteur_chaos), random_range(-self.facteur_chaos..self.facteur_chaos));
+        }
 
         //On ajoute l'accélération au vecteur vitesse
         self.vec_vitesse += accel+accel_correction;
@@ -149,9 +198,9 @@ impl Bird{
 
 fn fenetre_config() -> Conf {
     Conf {
-        window_title: "Vol en essain".to_owned(),
-        window_width: (WIDTH as i32),
-        window_height: (HEIGHT as i32),
+        window_title: "Vol en essaim".to_owned(),
+        window_width: (WINDOW_WIDTH as i32),
+        window_height: (WINDOW_HEIGHT as i32),
         ..Default::default()
     }
 }
@@ -160,13 +209,68 @@ fn fenetre_config() -> Conf {
 async fn main() {
 
     let mut oiseaux :Vec<Bird> = Vec::new();
+    let mut nb_oiseaux_global : f32 = 50.0;
 
-    for _ in 5..random_range(6..20) {
+    for _ in 0..(nb_oiseaux_global as i32) {
         oiseaux.push(Bird::new_random());
     }
 
+    let mut v_max_global            : f32 = 5.0;
+
+    let mut zone_repulsion_global   : f32 = 40.0;
+    let mut zone_orientation_global : f32 = 60.0;
+    let mut zone_attraction_global  : f32 = 80.0;
+
+    let mut force_repulsion_global  : f32 = 2.0;
+    let mut force_attraction_global : f32 = 0.1;
+    let mut force_orientation_global: f32 = 0.1;
+    let mut facteur_chaos_global    : f32 = 0.5;
+
     loop {
         clear_background(BLACK);
+
+        draw_rectangle_lines(0.0, 0.0, SIM_WIDTH, SIM_HEIGHT, 2.0, GREEN);
+
+        root_ui().window(hash!(), vec2(10.0, SIM_HEIGHT + 10.0), vec2(WINDOW_WIDTH - 20.0, WINDOW_HEIGHT - SIM_HEIGHT - 20.0), |ui| {
+            ui.label(None, "Parametres de l'essaim");
+            
+            // Un curseur qui modifie directement notre variable
+            ui.slider(hash!(), "Nb oiseaux", 1.0..300.0, &mut nb_oiseaux_global);
+            ui.slider(hash!(), "Vitesse Max", 1.0..20.0, &mut v_max_global);
+            
+            ui.slider(hash!(), "Zone repuls.", 10.0..100.0, &mut zone_repulsion_global);
+            ui.slider(hash!(), "Zone orient.", 10.0..200.0, &mut zone_orientation_global);
+            ui.slider(hash!(), "Zone attract.", 10.0..300.0, &mut zone_attraction_global);
+
+            ui.slider(hash!(), "Force repuls.", 0.1..5.0, &mut force_repulsion_global);
+            ui.slider(hash!(), "Force attract.", 0.01..1.0, &mut force_attraction_global);
+            ui.slider(hash!(), "Force orient.", 0.01..1.0, &mut force_orientation_global);
+            ui.slider(hash!(), "Chaos", 0.0..2.0, &mut facteur_chaos_global);
+        });
+
+        // Gestion du nombre d'oiseaux
+        let n_oiseaux = nb_oiseaux_global as usize;
+
+        while oiseaux.len() < n_oiseaux {
+            oiseaux.push(Bird::new_random());
+        }
+        while oiseaux.len() > n_oiseaux {
+            oiseaux.pop();
+        }
+
+        //MAJ des variables
+        for oiseau in &mut oiseaux{
+            oiseau.set_v_max(v_max_global);
+
+            oiseau.set_zone_repulsion(zone_repulsion_global);
+            oiseau.set_zone_orientation(zone_orientation_global);
+            oiseau.set_zone_attraction(zone_attraction_global);
+
+            oiseau.set_force_repulsion(force_repulsion_global);
+            oiseau.set_force_attraction(force_attraction_global);
+            oiseau.set_force_orientation(force_orientation_global);
+            oiseau.set_facteur_chaos(facteur_chaos_global);
+        }
 
     let mut accelerations:Vec<Vec2> = Vec::new();
 
